@@ -33,7 +33,7 @@ class T2SNet(nn.Module):
         proj_u_neg = torch.add(torch.matmul(Xtu, self.T_neg), self.bias_neg)
         proj_n_neg = torch.add(torch.matmul(Xtn, self.T_neg), self.bias_neg)
         
-        proj_u = torch.add(torch.mul(proj_u_pos, self.w), torch.mul(proj_u_neg, 1-self.w))
+        proj_u = torch.add(torch.mul(proj_u_pos, torch.sigmoid(self.w)), torch.mul(proj_u_neg, 1. - torch.sigmoid(self.w)))
         return proj_u, proj_n_neg, proj_p_pos
 
 D = nn.Sequential(                      # Discriminator
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     # data
     dataset_size = 100
     n_data = torch.ones(dataset_size, 2)
-    x0 = torch.normal(2*n_data, 1)
+    x0 = torch.normal(4*n_data, 1)
     y0 = torch.zeros(dataset_size)
     x1 = torch.normal(-2*n_data, 1)
     y1 = torch.ones(dataset_size)
@@ -81,9 +81,9 @@ if __name__ == '__main__':
 #    plt.ylim([-10,10])
 #    plt.show()
     
-    x0 = torch.normal(8*n_data, 1)
+    x0 = torch.normal(12*n_data, 1)
     y0 = torch.zeros(dataset_size)
-    x1 = torch.normal(-7.5*n_data, 1)
+    x1 = torch.normal(-20.5*n_data, 1)
     y1 = torch.ones(dataset_size)
     
     xtn, xtp = x0, x1
@@ -114,17 +114,17 @@ if __name__ == '__main__':
         
         prob_s = D(xs)
         prob_t0 = D(p_u)
-        D_loss = - torch.mean(torch.log(prob_s) + torch.log(1. - prob_t0))
+        D_loss = -1.* torch.mean(torch.log(prob_s) + torch.log(1. - prob_t0))
 
         prob_s = Dn(xsn)
-        prob_t = Dn(p_0)
-        Dn_loss = - torch.mean(torch.log(prob_s) + torch.log(1. - prob_t))
+        prob_t1 = Dn(p_0)
+        Dn_loss = -1.* torch.mean(torch.log(prob_s) + torch.log(1. - prob_t1))
         
-        prob_s = Dp(xtp)
-        prob_t = Dp(p_1)
-        Dp_loss = - torch.mean(torch.log(prob_s) + torch.log(1. - prob_t))
+        prob_s = Dp(xsp)
+        prob_t2 = Dp(p_1)
+        Dp_loss = -1.* torch.mean(torch.log(prob_s) + torch.log(1. - prob_t2))
         
-        G_loss = torch.mean(torch.log(1. - prob_t0))
+        G_loss = 1.*(torch.mean(torch.log(1. - prob_t0))+torch.mean(torch.log(1. - prob_t1))+torch.mean(torch.log(1. - prob_t2)))
         
         opt_D.zero_grad()
         D_loss.backward(retain_variables=True)      # retain_variables for reusing computational graph
@@ -144,7 +144,8 @@ if __name__ == '__main__':
         
         if step % 100 == 0:
 #            print('G_loss:', G_loss.data[0])
-#            print(D_loss.data[0],Dn_loss.data[0],Dp_loss.data[0],G_loss.data[0])
+            print('step:%d Total_loss:%1.2f'%(step,D_loss.data[0]+Dn_loss.data[0]+Dp_loss.data[0]+G_loss.data[0]))
+            print('D_loss:%1.2f  Dp_loss:%1.2f  Dn_loss:%1.2f  G_loss:%1.2f'%(D_loss.data[0],Dn_loss.data[0],Dp_loss.data[0],G_loss.data[0]))
 #            for name, param in tsNet.state_dict().items():
 #                if name == 'T_pos':
 #                    print(name, param)
@@ -154,10 +155,11 @@ if __name__ == '__main__':
             plt.scatter(xt.data.numpy()[:, 0], xt.data.numpy()[:, 1], c=yt.data.numpy(), s=100, lw=0, cmap='RdYlGn')
             plt.show()
     
-            p_u, p_0, p_1 = tsNet(xt, xtn, xtp)
+#            p_u, p_0, p_1 = tsNet(xt, xtn, xtp)
+            plt.scatter(xs.data.numpy()[:, 0], xs.data.numpy()[:, 1], c=ys.data.numpy(), s=100, lw=0, cmap='RdYlGn')
             plt.scatter(p_u.data.numpy()[:, 0], p_u.data.numpy()[:, 1])
             plt.show()
-            print(step,D_loss.data[0],Dn_loss.data[0],Dp_loss.data[0],G_loss.data[0])
+#            print(step,D_loss.data[0],Dn_loss.data[0],Dp_loss.data[0],G_loss.data[0])
 #            time.sleep(1)
     for name, param in tsNet.state_dict().items():
         if name == 'w':
