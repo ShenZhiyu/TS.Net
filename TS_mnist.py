@@ -71,10 +71,10 @@ if __name__ == '__main__':
     LR_G = 0.1
     DOWNLOAD_MNIST = False
     N_TEST_IMG = 10
-    INPUT0_LABEL = 1
-    INPUT1_LABEL = 0
-    OUTPUT0_LABEL = 7
-    OUTPUT1_LABEL = 8
+    INPUT0_LABEL = 3
+    INPUT1_LABEL = 6
+    OUTPUT0_LABEL = 5
+    OUTPUT1_LABEL = 9
     
     # Mnist digits dataset
     train_data = torchvision.datasets.MNIST(
@@ -155,6 +155,16 @@ if __name__ == '__main__':
             plt.savefig('fig/1_'+str(step/100)+'.jpg', dpi=75)
             plt.show()
             
+            p_u, p_0, p_1, w_loss = tsNet(xt, xtp, xtn)
+            plt.figure()
+            plt.imshow(np.reshape(p_0.data[0].cpu().numpy(), (28,28)), cmap='gray')
+            plt.savefig('fig/2_'+str(step/100)+'.jpg', dpi=75)
+            plt.show()
+            plt.figure()
+            plt.imshow(np.reshape(p_1.data[0].cpu().numpy(), (28,28)), cmap='gray')
+            plt.savefig('fig/3_'+str(step/100)+'.jpg', dpi=75)
+            plt.show()
+            
 #            plt.scatter(xs.data.numpy()[:, 0], xs.data.numpy()[:, 1], c=ys.data.numpy(), s=100, lw=0)
 #            plt.show()
             
@@ -168,6 +178,6 @@ if __name__ == '__main__':
 #                        c=np.concatenate((ys.data.numpy(), yt.data.numpy()+2), 0), 
 #                        s=100, lw=0)
 #            plt.show()
-    for name, param in tsNet.state_dict().items():
-        if name == 'w':
-            print(name, param)
+#    for name, param in tsNet.state_dict().items():
+#        if name == 'w':
+#            print(name, param)
