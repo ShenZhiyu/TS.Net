@@ -107,7 +107,7 @@ if __name__ == '__main__':
     opt_Dn = torch.optim.Adam(Dn.parameters(), lr=LR_D)
     opt_G = torch.optim.Adam(tsNet.parameters(), lr=LR_G)
     
-    for step in range(10000):
+    for step in range(50000):
         p_u, p_0, p_1 = tsNet(xt, xtn, xtp)
         
         prob_s0 = D(xs)
