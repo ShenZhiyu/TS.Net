@@ -110,11 +110,14 @@ if __name__ == '__main__':
     t0_np = train_data.train_data.numpy()[labels==OUTPUT0_LABEL,:,:].astype(np.float)/255.
     t1_np = train_data.train_data.numpy()[labels==OUTPUT1_LABEL,:,:].astype(np.float)/255.
     
+    # Variable
     xs, xsn, xsp = Variable(torch.FloatTensor(np.concatenate((s0_np[0:1000],s1_np[0:1000]), 0)).view(-1,28*28)), Variable(torch.FloatTensor(s0_np[0:1000]).view(-1,28*28)), Variable(torch.FloatTensor(s1_np[0:1000]).view(-1,28*28))
     xt, xtn, xtp = Variable(torch.FloatTensor(np.concatenate((t0_np[0:1000],t1_np[0:1000]), 0)).view(-1,28*28)), Variable(torch.FloatTensor(t0_np[0:10]).view(-1,28*28)), Variable(torch.FloatTensor(t1_np[0:10]).view(-1,28*28))
     
+    # cuda()
     xs, xsn, xsp = xs.cuda(), xsn.cuda(), xsp.cuda()
     xt, xtn, xtp = xt.cuda(), xtn.cuda(), xtp.cuda()
+    
     # Network
     tsNet = T2SNet(28*28, xt.data.shape[0])
     tsNet = tsNet.cuda()
@@ -123,6 +126,8 @@ if __name__ == '__main__':
     Dn = Dn.cuda()
     Dpf = Dpf.cuda()
     Dnf = Dnf.cuda()
+    
+    # Optim
     opt_D = torch.optim.SGD(D.parameters(), lr=LR_D)
     opt_Dp = torch.optim.SGD(Dp.parameters(), lr=LR_D)
     opt_Dn = torch.optim.SGD(Dn.parameters(), lr=LR_D)
@@ -130,7 +135,7 @@ if __name__ == '__main__':
     opt_Dnf = torch.optim.SGD(Dnf.parameters(), lr=LR_D)
     opt_G = torch.optim.SGD(tsNet.parameters(), lr=LR_G)
     
-    for step in range(10000):
+    for step in range(100000):
         p_u, p_0, p_1, p_0f, p_1f = tsNet(xt, xtn, xtp)
         
         prob_s0 = D(xs)
@@ -185,26 +190,27 @@ if __name__ == '__main__':
         opt_G.step()
         
         if step % 100 == 0:
-            print('step:%d Total_loss:%1.5f'%(step,D_loss.data[0]+Dn_loss.data[0]+Dp_loss.data[0]+G_loss.data[0]))
-            print('D_loss:%1.5f Dn_loss:%1.5f Dp_loss:%1.5f G_loss:%f'%(D_loss.data[0],Dn_loss.data[0],Dp_loss.data[0],G_loss.data[0]))
+            print('step: %d'%(step))
+            print('D_loss:%.5f\nDn_loss:%.5f\nDp_loss:%.5f\nG_loss:%.5f\nDnf_loss:%.5f\nDpf_loss:%.5f'\
+                  %(D_loss.data[0],Dn_loss.data[0],Dp_loss.data[0],G_loss.data[0],Dnf_loss.data[0],Dpf_loss.data[0]))
             
             plt.figure()
+            plt.subplot(221)
             plt.imshow(np.reshape(p_0.data[0].cpu().numpy(), (28,28)), cmap='gray')
-            plt.savefig('fig/0_'+str(step/100)+'.jpg', dpi=75)
-            plt.show()
-            plt.figure()
-            plt.imshow(np.reshape(p_1.data[0].cpu().numpy(), (28,28)), cmap='gray')
-            plt.savefig('fig/1_'+str(step/100)+'.jpg', dpi=75)
-            plt.show()
+#            plt.savefig('fig/0_'+str(step/100)+'.jpg', dpi=75)
             
-            p_u, p_0, p_1, w_loss = tsNet(xt, xtp, xtn)
-            plt.figure()
-            plt.imshow(np.reshape(p_0.data[0].cpu().numpy(), (28,28)), cmap='gray')
-            plt.savefig('fig/2_'+str(step/100)+'.jpg', dpi=75)
-            plt.show()
-            plt.figure()
+            plt.subplot(222)
             plt.imshow(np.reshape(p_1.data[0].cpu().numpy(), (28,28)), cmap='gray')
-            plt.savefig('fig/3_'+str(step/100)+'.jpg', dpi=75)
+#            plt.savefig('fig/1_'+str(step/100)+'.jpg', dpi=75)
+            
+#            p_u, p_0, p_1, p_0f, p_1f = tsNet(xt, xtp, xtn)
+            plt.subplot(223)
+            plt.imshow(np.reshape(p_0f.data[0].cpu().numpy(), (28,28)), cmap='gray')
+#            plt.savefig('fig/0f_'+str(step/100)+'.jpg', dpi=75)
+            
+            plt.subplot(224)
+            plt.imshow(np.reshape(p_1f.data[0].cpu().numpy(), (28,28)), cmap='gray')
+            plt.savefig('fig/0_'+str(int(step/100))+'.jpg', dpi=75)
             plt.show()
             
 #            plt.scatter(xs.data.numpy()[:, 0], xs.data.numpy()[:, 1], c=ys.data.numpy(), s=100, lw=0)
