@@ -31,12 +31,14 @@ class T2SNet(nn.Module):
     def forward(self, Xtu, Xtn, Xtp):
         proj_u_pos = torch.add(torch.matmul(Xtu, self.T_pos), self.bias_pos)
         proj_p_pos = torch.add(torch.matmul(Xtp, self.T_pos), self.bias_pos)
+        proj_n_pos = torch.add(torch.matmul(Xtn, self.T_pos), self.bias_pos)
         proj_u_neg = torch.add(torch.matmul(Xtu, self.T_neg), self.bias_neg)
         proj_n_neg = torch.add(torch.matmul(Xtn, self.T_neg), self.bias_neg)
+        proj_p_neg = torch.add(torch.matmul(Xtp, self.T_neg), self.bias_neg)
         
         proj_u = torch.add(torch.mul(proj_u_pos, torch.sigmoid(self.w)), torch.mul(proj_u_neg, 1. - torch.sigmoid(self.w)))
-        w_loss = - torch.matmul(torch.t(self.w), self.w)
-        return torch.sigmoid(proj_u), torch.sigmoid(proj_n_neg), torch.sigmoid(proj_p_pos), w_loss
+#        w_loss = - torch.matmul(torch.t(self.w), self.w)
+        return torch.sigmoid(proj_u), torch.sigmoid(proj_n_neg), torch.sigmoid(proj_p_pos), torch.sigmoid(proj_p_neg), torch.sigmoid(proj_n_pos)
 
 D = nn.Sequential(                      # Discriminator
     nn.Linear(28*28, 256),     # receive art work either from the famous artist or a newbie like G
@@ -55,6 +57,22 @@ Dp = nn.Sequential(                      # Discriminator
     nn.Sigmoid(),                       # tell the probability that the art work is made by artist
 )
 Dn = nn.Sequential(                      # Discriminator
+    nn.Linear(28*28, 256),     # receive art work either from the famous artist or a newbie like G
+    nn.ReLU(),
+    nn.Linear(256, 64),
+    nn.ReLU(),
+    nn.Linear(64, 1),
+    nn.Sigmoid(),                       # tell the probability that the art work is made by artist
+)
+Dpf = nn.Sequential(                      # Discriminator
+    nn.Linear(28*28, 256),     # receive art work either from the famous artist or a newbie like G
+    nn.ReLU(),
+    nn.Linear(256, 64),
+    nn.ReLU(),
+    nn.Linear(64, 1),
+    nn.Sigmoid(),                       # tell the probability that the art work is made by artist
+)
+Dnf = nn.Sequential(                      # Discriminator
     nn.Linear(28*28, 256),     # receive art work either from the famous artist or a newbie like G
     nn.ReLU(),
     nn.Linear(256, 64),
@@ -103,13 +121,17 @@ if __name__ == '__main__':
     D = D.cuda()
     Dp = Dp.cuda()
     Dn = Dn.cuda()
+    Dpf = Dpf.cuda()
+    Dnf = Dnf.cuda()
     opt_D = torch.optim.SGD(D.parameters(), lr=LR_D)
     opt_Dp = torch.optim.SGD(Dp.parameters(), lr=LR_D)
     opt_Dn = torch.optim.SGD(Dn.parameters(), lr=LR_D)
+    opt_Dpf = torch.optim.SGD(Dpf.parameters(), lr=LR_D)
+    opt_Dnf = torch.optim.SGD(Dnf.parameters(), lr=LR_D)
     opt_G = torch.optim.SGD(tsNet.parameters(), lr=LR_G)
     
     for step in range(10000):
-        p_u, p_0, p_1, w_loss = tsNet(xt, xtn, xtp)
+        p_u, p_0, p_1, p_0f, p_1f = tsNet(xt, xtn, xtp)
         
         prob_s0 = D(xs)
         prob_t0 = D(p_u)
@@ -140,6 +162,26 @@ if __name__ == '__main__':
         
         opt_G.zero_grad()
         G_loss.backward()
+        opt_G.step()
+
+        prob_s3 = Dnf(xsn)
+        prob_t3 = Dnf(p_0f)
+        Dnf_loss = -10.**0 * (torch.mean(torch.log(prob_s3)) + torch.mean(torch.log(1. - prob_t3)))
+
+        prob_s4 = Dpf(xsp)
+        prob_t4 = Dpf(p_1f)
+        Dpf_loss = -10.**0 * (torch.mean(torch.log(prob_s4)) + torch.mean(torch.log(1. - prob_t4)))
+
+        opt_Dnf.zero_grad()
+        opt_G.zero_grad()
+        Dnf_loss.backward(retain_variables=True)      # retain_variables for reusing computational graph
+        opt_Dnf.step()
+        opt_G.step()
+
+        opt_Dpf.zero_grad()
+        opt_G.zero_grad()
+        Dpf_loss.backward(retain_variables=True)      # retain_variables for reusing computational graph
+        opt_Dpf.step()
         opt_G.step()
         
         if step % 100 == 0:
