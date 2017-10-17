@@ -17,6 +17,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import numpy as np
 import time
+from svmutil import *
 
 
 class T2SNet(nn.Module):
@@ -86,13 +87,14 @@ if __name__ == '__main__':
 #    EPOCH = 100
 #    BATCH_SIZE = 10
     LR_D = 0.0005
-    LR_G = 0.1
+    LR_G = 0.5
     DOWNLOAD_MNIST = False
     N_TEST_IMG = 10
-    INPUT0_LABEL = 3
-    INPUT1_LABEL = 6
-    OUTPUT0_LABEL = 5
-    OUTPUT1_LABEL = 9
+    LABELED_TARGET = 3
+    INPUT0_LABEL = 1
+    INPUT1_LABEL = 2
+    OUTPUT0_LABEL = 3
+    OUTPUT1_LABEL = 4
     
     # Mnist digits dataset
     train_data = torchvision.datasets.MNIST(
@@ -112,7 +114,7 @@ if __name__ == '__main__':
     
     # Variable
     xs, xsn, xsp = Variable(torch.FloatTensor(np.concatenate((s0_np[0:1000],s1_np[0:1000]), 0)).view(-1,28*28)), Variable(torch.FloatTensor(s0_np[0:1000]).view(-1,28*28)), Variable(torch.FloatTensor(s1_np[0:1000]).view(-1,28*28))
-    xt, xtn, xtp = Variable(torch.FloatTensor(np.concatenate((t0_np[0:1000],t1_np[0:1000]), 0)).view(-1,28*28)), Variable(torch.FloatTensor(t0_np[0:10]).view(-1,28*28)), Variable(torch.FloatTensor(t1_np[0:10]).view(-1,28*28))
+    xt, xtn, xtp = Variable(torch.FloatTensor(np.concatenate((t0_np[0:1000],t1_np[0:1000]), 0)).view(-1,28*28)), Variable(torch.FloatTensor(t0_np[0:LABELED_TARGET]).view(-1,28*28)), Variable(torch.FloatTensor(t1_np[0:LABELED_TARGET]).view(-1,28*28))
     
     # cuda()
     xs, xsn, xsp = xs.cuda(), xsn.cuda(), xsp.cuda()
@@ -135,7 +137,7 @@ if __name__ == '__main__':
     opt_Dnf = torch.optim.SGD(Dnf.parameters(), lr=LR_D)
     opt_G = torch.optim.SGD(tsNet.parameters(), lr=LR_G)
     
-    for step in range(100000):
+    for step in range(50000):
         p_u, p_0, p_1, p_0f, p_1f = tsNet(xt, xtn, xtp)
         
         prob_s0 = D(xs)
@@ -195,23 +197,45 @@ if __name__ == '__main__':
                   %(D_loss.data[0],Dn_loss.data[0],Dp_loss.data[0],G_loss.data[0],Dnf_loss.data[0],Dpf_loss.data[0]))
             
             plt.figure()
-            plt.subplot(221)
+            
+            plt.subplot(431)
+            plt.imshow(np.reshape(xtn.data[0].cpu().numpy(), (28,28)), cmap='gray')
+            
+            plt.subplot(432)
             plt.imshow(np.reshape(p_0.data[0].cpu().numpy(), (28,28)), cmap='gray')
-#            plt.savefig('fig/0_'+str(step/100)+'.jpg', dpi=75)
             
-            plt.subplot(222)
-            plt.imshow(np.reshape(p_1.data[0].cpu().numpy(), (28,28)), cmap='gray')
-#            plt.savefig('fig/1_'+str(step/100)+'.jpg', dpi=75)
-            
-#            p_u, p_0, p_1, p_0f, p_1f = tsNet(xt, xtp, xtn)
-            plt.subplot(223)
-            plt.imshow(np.reshape(p_0f.data[0].cpu().numpy(), (28,28)), cmap='gray')
-#            plt.savefig('fig/0f_'+str(step/100)+'.jpg', dpi=75)
-            
-            plt.subplot(224)
+            plt.subplot(433)
             plt.imshow(np.reshape(p_1f.data[0].cpu().numpy(), (28,28)), cmap='gray')
-            plt.savefig('fig/0_'+str(int(step/100))+'.jpg', dpi=75)
+            
+            plt.subplot(434)
+            plt.imshow(np.reshape(xtn.data[1].cpu().numpy(), (28,28)), cmap='gray')
+            
+            plt.subplot(435)
+            plt.imshow(np.reshape(p_0.data[1].cpu().numpy(), (28,28)), cmap='gray')
+            
+            plt.subplot(436)
+            plt.imshow(np.reshape(p_1f.data[1].cpu().numpy(), (28,28)), cmap='gray')
+            
+            plt.subplot(437)
+            plt.imshow(np.reshape(xtp.data[0].cpu().numpy(), (28,28)), cmap='gray')
+            
+            plt.subplot(438)
+            plt.imshow(np.reshape(p_0f.data[0].cpu().numpy(), (28,28)), cmap='gray')
+            
+            plt.subplot(439)
+            plt.imshow(np.reshape(p_1.data[0].cpu().numpy(), (28,28)), cmap='gray')
+            
+            plt.subplot(4,3,10)
+            plt.imshow(np.reshape(xtp.data[1].cpu().numpy(), (28,28)), cmap='gray')
+            
+            plt.subplot(4,3,11)
+            plt.imshow(np.reshape(p_0f.data[1].cpu().numpy(), (28,28)), cmap='gray')
+            
+            plt.subplot(4,3,12)
+            plt.imshow(np.reshape(p_1.data[1].cpu().numpy(), (28,28)), cmap='gray')
+            
             plt.show()
+            plt.savefig('fig/0_'+str(int(step/100))+'.jpg', dpi=75)
             
 #            plt.scatter(xs.data.numpy()[:, 0], xs.data.numpy()[:, 1], c=ys.data.numpy(), s=100, lw=0)
 #            plt.show()
@@ -226,6 +250,29 @@ if __name__ == '__main__':
 #                        c=np.concatenate((ys.data.numpy(), yt.data.numpy()+2), 0), 
 #                        s=100, lw=0)
 #            plt.show()
-#    for name, param in tsNet.state_dict().items():
-#        if name == 'w':
-#            print(name, param)
+    for name, param in tsNet.state_dict().items():
+        if name == 'w':
+            w = param.cpu().numpy()
+     
+    # source model
+    for t in range(10):
+        y = np.concatenate((np.zeros((1,1000)),np.ones((1,1000))),1).tolist()[0]
+        x = np.reshape(np.concatenate((s0_np[0:1000],s1_np[0:1000]),0),(2000,28*28)).tolist()
+        
+        svm_train_opt = '-t 0 -c 0.001 -b 1 -q'
+        model_2000 = svm_train(y, x, svm_train_opt)
+        
+        p_label, p_acc, p_val = svm_predict(y, np.reshape(np.concatenate((s0_np[1000:2000],s1_np[1000:2000]),0),(2000,28*28)).tolist(), model_2000, '-b 1 -q')
+        smodel_to_s_acc = p_acc[0]
+        p_label, p_acc, p_val = svm_predict(np.concatenate((np.zeros((1,1000)),np.ones((1,1000))),1).tolist()[0], np.reshape(np.concatenate((t0_np[0:1000],t1_np[0:1000]),0),(2000,28*28)).tolist(), model_2000, '-b 1 -q')
+        smodel_to_t_acc = p_acc[0]
+        p_u, p_0, p_1, p_0f, p_1f = tsNet(xt, xt, xt)
+        p_label0, p_acc0, p_val0 = svm_predict(np.zeros([1,2000]).tolist()[0], p_0.data.cpu().numpy().tolist(), model_2000, '-b 1 -q')
+        p_label1, p_acc1, p_val1 = svm_predict(np.ones([1,2000]).tolist()[0], p_1.data.cpu().numpy().tolist(), model_2000, '-b 1 -q')
+        pv0 = np.array(p_val0)[:,0]
+        pv1 = np.array(p_val1)[:,1]
+        p_labelt = np.sign(pv1-pv0).astype(int)
+        smodel_to_p_acc = (np.sum(p_labelt[0:1000]==-1)+np.sum(p_labelt[1000:2000]==1))/2000
+        print('smodel_to_s_acc: %f' % smodel_to_s_acc)
+        print('smodel_to_t_acc: %f' % smodel_to_t_acc)
+        print('smodel_to_p_acc: %f' % (smodel_to_p_acc*100))
