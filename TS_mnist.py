@@ -91,10 +91,10 @@ if __name__ == '__main__':
     DOWNLOAD_MNIST = False
     N_TEST_IMG = 10
     LABELED_TARGET = 3
-    INPUT0_LABEL = 1
-    INPUT1_LABEL = 2
-    OUTPUT0_LABEL = 3
-    OUTPUT1_LABEL = 4
+    INPUT0_LABEL = 7
+    INPUT1_LABEL = 3
+    OUTPUT0_LABEL = 9
+    OUTPUT1_LABEL = 8
     
     # Mnist digits dataset
     train_data = torchvision.datasets.MNIST(
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     opt_Dnf = torch.optim.SGD(Dnf.parameters(), lr=LR_D)
     opt_G = torch.optim.SGD(tsNet.parameters(), lr=LR_G)
     
-    for step in range(50000):
+    for step in range(20000):
         p_u, p_0, p_1, p_0f, p_1f = tsNet(xt, xtn, xtp)
         
         prob_s0 = D(xs)
@@ -255,6 +255,9 @@ if __name__ == '__main__':
             w = param.cpu().numpy()
      
     # source model
+    ss=0.
+    tt=0.
+    pp=0.
     for t in range(10):
         y = np.concatenate((np.zeros((1,1000)),np.ones((1,1000))),1).tolist()[0]
         x = np.reshape(np.concatenate((s0_np[0:1000],s1_np[0:1000]),0),(2000,28*28)).tolist()
@@ -273,6 +276,10 @@ if __name__ == '__main__':
         pv1 = np.array(p_val1)[:,1]
         p_labelt = np.sign(pv1-pv0).astype(int)
         smodel_to_p_acc = (np.sum(p_labelt[0:1000]==-1)+np.sum(p_labelt[1000:2000]==1))/2000
-        print('smodel_to_s_acc: %f' % smodel_to_s_acc)
-        print('smodel_to_t_acc: %f' % smodel_to_t_acc)
-        print('smodel_to_p_acc: %f' % (smodel_to_p_acc*100))
+        ss += smodel_to_s_acc/10.
+        tt += smodel_to_t_acc/10.
+        pp += smodel_to_p_acc/10.
+    print('smodel_to_s_acc: %f' % ss)
+    print('smodel_to_t_acc: %f' % tt)
+    print('smodel_to_p_acc: %f' % (pp*100))
+    print('w___________acc: %f' % ((np.sum(w[0:1000]<0)+np.sum(w[1000:2000]>0))/2000*100))
