@@ -167,11 +167,11 @@ if __name__ == '__main__':
 
         prob_s3 = Dnf(xsn)
         prob_t3 = Dnf(p_0f)
-        Dnf_loss = -10.**0.6 * (torch.mean(torch.log(prob_s3)) + torch.mean(torch.log(1. - prob_t3)))
+        Dnf_loss = -10.**1.6 * (torch.mean(torch.log(prob_s3)) + torch.mean(torch.log(1. - prob_t3)))
 
         prob_s4 = Dpf(xsp)
         prob_t4 = Dpf(p_1f)
-        Dpf_loss = -10.**0.6 * (torch.mean(torch.log(prob_s4)) + torch.mean(torch.log(1. - prob_t4)))
+        Dpf_loss = -10.**1.6 * (torch.mean(torch.log(prob_s4)) + torch.mean(torch.log(1. - prob_t4)))
 
         opt_Dnf.zero_grad()
         opt_G.zero_grad()
