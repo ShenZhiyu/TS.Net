@@ -90,11 +90,11 @@ if __name__ == '__main__':
     LR_G = 0.5
     DOWNLOAD_MNIST = False
     N_TEST_IMG = 10
-    LABELED_TARGET = 3
-    INPUT0_LABEL = 7
-    INPUT1_LABEL = 3
-    OUTPUT0_LABEL = 9
-    OUTPUT1_LABEL = 8
+    LABELED_TARGET = 2
+    INPUT0_LABEL = 5
+    INPUT1_LABEL = 9
+    OUTPUT0_LABEL = 2
+    OUTPUT1_LABEL = 0
     
     # Mnist digits dataset
     train_data = torchvision.datasets.MNIST(
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     opt_Dnf = torch.optim.SGD(Dnf.parameters(), lr=LR_D)
     opt_G = torch.optim.SGD(tsNet.parameters(), lr=LR_G)
     
-    for step in range(20000):
+    for step in range(10000):
         p_u, p_0, p_1, p_0f, p_1f = tsNet(xt, xtn, xtp)
         
         prob_s0 = D(xs)
@@ -234,8 +234,8 @@ if __name__ == '__main__':
             plt.subplot(4,3,12)
             plt.imshow(np.reshape(p_1.data[1].cpu().numpy(), (28,28)), cmap='gray')
             
-            plt.show()
             plt.savefig('fig/0_'+str(int(step/100))+'.jpg', dpi=75)
+            plt.show()
             
 #            plt.scatter(xs.data.numpy()[:, 0], xs.data.numpy()[:, 1], c=ys.data.numpy(), s=100, lw=0)
 #            plt.show()
